@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+
+    THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS
+    FOR A PARTICULAR PURPOSE. THIS CODE AND INFORMATION ARE NOT SUPPORTED BY XEBIALABS.
+
+-->
+<synthetic xsi:schemaLocation="http://www.xebialabs.com/deployit/synthetic synthetic.xsd" xmlns="http://www.xebialabs.com/deployit/synthetic" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    
+
+<!-- Dar Builder -->
+     <type type="bs.UnixBuildServer" extends="xlrelease.Configuration">
+        <property name="serverName" label="Name" kind="string" description="Unique name to descript te remote Unix Host that will host the buildserver" />
+        <property name="host" label="host" kind="string" />
+        <property name="username" label="Username" kind="string" />
+        <property name="password" label="Password" kind="string" password="true" />
+        <property name="BaseWorkingDirectory" label="Filesystem Workspace" kind="string" />
+    </type>
+    
+
+
+    <type type="bs.createNewWorkSpace" description="create a new workspace on a Unix Buildserver" extends="xlrelease.PythonScript">
+        <property name="taskColor" hidden="true" default="#7A1F99" />
+        <property name="UnixBuildServer" category="input" label="Unix Buildserver to use" referenced-type="bs.UnixBuildServer" kind="ci" />
+        <property name="WORKSPACE" category="input" label="workspace name" kind="string" required="true"/>
+        <property name="scriptLocation" default="bs_scripts/createWorkSpace.py" hidden="true" />
+    </type>
+
+</synthetic>
+
+
