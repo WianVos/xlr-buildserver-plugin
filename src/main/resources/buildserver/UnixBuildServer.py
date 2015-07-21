@@ -22,44 +22,39 @@ from overtherepy import SshConnectionOptions, OverthereHost, OverthereHostSessio
 
 class UnixBuildServer(object):
     def __init__(self, server):
-        self.ssh_opts = SshConnectionOptions(server['host'], username=server['username'], password=server['password'])
+        self.sshOpts = SshConnectionOptions(server['host'], username=server['username'],password=server['password'])
+        self.host = OverthereHost(self.sshOpts)
+        self.session = OverthereHostSession(self.host)
+
         self.base_working_directory = server['BaseWorkingDirectory']
+        self.working_directory = self.base_working_directory
 
-
-        self.__session = None
-        self.__host = OverthereHost(self.ssh_opts)
-        self.create_directory(self.workingDirectory)
-        workDir = self.session.remote_file(self.workingDirectory)
+        self.create_working_directory(self.base_working_directory)
+        workDir = self.session.remote_file(self.base_working_directory)
         self.session.get_conn().setWorkingDirectory(workDir)
-
-    @property
-    def work_directory(self):
-        if self.__work_directory is None:
-            return self.base_working_directory
-        else:
-            return self.__work_directory
-
-    @work_directory.setter
-    def work_directory(self,path):
-        self.__work_directory = "%s/%s" %(self.base_working_directory, path)
 
     @staticmethod
     def createServer(server):
+
         return UnixBuildServer(server)
 
 
+    def set_working_directory(self, relative_directory_path):
+        self.working_directory = "%s/%s" % (self.base_working_directory, relative_directory_path)
+        self.create_working_directory(self.working_directory)
+        workDir = self.session.remote_file(self.working_directory)
+        self.session.get_conn().setWorkingDirectory(workDir)
+
+    # main interface
+
+
     # session related methods
-    def get_session(self):
-        if self.__session is None:
-           self.__session = OverthereHostSession(self.__host)
-           self.__session.execute("/bin/mkdir -p %s" % self.work_directory(), check_success=False, suppress_streaming_output=False)
-           workDir = self.__session.remote_file(self.work_directory())
-           self.__session.get_conn().setWorkingDirectory(workDir)
-        return __session
 
     def close_session(selfs):
-        if self.__session is not None:
-        self.__session.close()
+        self.session.close()
+
+    def create_working_directory(self, dir_full_path):
+        response = self.session.execute("/bin/mkdir -p %s" % (dir_full_path))
 
     # File Handeling
     def read_file_in_workspace(self, file_name):
@@ -69,14 +64,17 @@ class UnixBuildServer(object):
         print "not yet implemented"
 
     def create_directory(self, directory_name):
-        print "not yet implemented"
+        self.execute_command(["/bin/mkdir -p %s" % (directory_name)])
+
 
     # command Execution
+    def filename_generator(self, size=9, chars=string.ascii_uppercase + string.digits):
+        return ''.join(random.choice(chars) for _ in range(size))
 
-    def execute_command_with_profile(self, command, environment_variables=None):
-        # setup the session to the remote host
-        session = self.get_session()
+    def get_tmp_script_filename(self):
+        return "%s.sh" % self.filename_generator()
 
+    def execute_command(self, command, environment_variables=None):
         # get a BashScriptBuilder object
         command_object = BashScriptBuilder()
 
@@ -92,13 +90,11 @@ class UnixBuildServer(object):
 
         print "executing command: %s " % (executable_command)
 
-        tmp_script_filename = "%s.sh" % self.filename_generator()
+        tmp_script_filename = self.get_tmp_script_filename()
 
-        session.upload_text_content_to_work_dir(self, commands, script, executable=True)
+        self.session.upload_text_content_to_work_dir(command_object.build(), tmp_script_filename, executable=True)
     #
-        response = session.execute(command, check_success=False, suppress_streaming_output=False)
-
-        self.close_session()
+        response = self.session.execute("%s/%s" % (self.working_directory, tmp_script_filename), check_success=False, suppress_streaming_output=False)
 
         if response.rc != 0:
             print response.stderr
